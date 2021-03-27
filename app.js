@@ -1,16 +1,21 @@
+require('dotenv').config();
 const express = require('express');
 const app = express()
 const path = require('path')
 const createError = require('http-errors')
 
 // Init
-app.listen(3000, () => { console.log('http://127.0.0.1:3000') })
+app.listen(process.env.PORT, () => { 
+	console.log(process.env.HOST + ':' + process.env.PORT) 
+})
 app.set('view engine', 'pug')
 app.set('views', path.join(__dirname, './views'))
 app.locals.pretty = true
+app.locals.TITLE = '도서관리시스템'
 
 // Middleware
-
+app.use(express.json()) // post 방식으로 들어온 데이터를 req.body로 접근할 수 있다
+app.use(express.urlencoded({ extended: false }))
 
 // Router
 app.use('/', express.static(path.join(__dirname, './public')))
@@ -25,5 +30,5 @@ app.use((req, res, next) => {
 })
 
 app.use((err, req, res, next) => {
-	res.send(err)
+	res.send(process.env.SERVICE == 'development' ? err : '에러')
 })

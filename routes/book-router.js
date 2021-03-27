@@ -1,30 +1,48 @@
 const express = require('express')
+const moment = require('moment')
+const Joi = require('joi')
 const router = express.Router()
-const mysql = require('mysql2')
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-	password: '000000',
-  database: 'leepower'
-});
+const { pool } = require('../modules/mysql-conn')
+const pug = { title: '도서관리', file: 'book' }
 
-router.get('/', (req, res, next) => {
-	let sql = 'SELECT * FROM books ORDER BY id DESC'
-	connection.query(sql, (err, result) => {
-		res.json(result);
-	})
+router.get(['/', '/list'], async (req, res, next) => {
+	try {
+		let sql = 'SELECT * FROM books ORDER BY id DESC'
+		const connect = await pool.getConnection()
+		const [result] = await connect.query(sql)
+		connect.release()
+		const books = result.map(v => {
+			v.createdAt = moment(v.createdAt).format('YYYY-MM-DD')
+			return v;
+		})
+		res.render('book/list', { ...pug, books });
+	} catch (err) {
+		next(err)
+	}
 })
 
 router.get('/create', (req, res, next) => {
-	res.render('book/create')
+	res.render('book/create', pug)
 })
 
-router.get('/save', (req, res, next) => {
-	let sql = 'INSERT INTO books SET bookName=?, writer=?, content=?'
-	let values = [req.query.bookName, req.query.writer, req.query.content]
-	connection.query(sql, values, (err, result) => {
+router.post('/save', async (req, res, next) => {
+	try {
+		const schema = Joi.object({
+			bookName: Joi.string().max(255).required(),
+			writer: Joi.string().max(255).required(),
+			content: Joi.string(),
+		})
+		await schema.validateAsync(req.body)
+		let { bookName, writer, content } = req.body
+		let sql = 'INSERT INTO books SET bookName=?, writer=?, content=?'
+		let values = [bookName, writer, content]
+		const connect = await pool.getConnection()
+		const [result] = connect.query(sql, values)
+		connect.release()
 		res.redirect('/book')
-	})
+	} catch (err) {
+		next(err)
+	}
 })
 
 module.exports = router

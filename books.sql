@@ -13,3 +13,9 @@
 
 -- Read
 -- SELECT * FROM books ORDER BY id DESC; -- ASC는 오름차순
+
+-- SELECT * FROM books ORDER BY id DESC LIMIT 10, 5; --시작레코드, 갯수
+-- SELECT COUNT(*) FROM books;
+-- SELECT * FROM books WHERE id = 1;
+-- SELECT * FROM books WHERE bookName LIKE '%길동%';
+SELECT * FROM books WHERE bookName LIKE '%길동%' OR content LIKE '%나를%';

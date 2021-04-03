@@ -4,7 +4,11 @@ const joi = require('../middlewares/joi-mw')
 const pager = require('../modules/pager-conn')
 const router = express.Router()
 const { pool } = require('../modules/mysql-conn')
-const { upload } = require('../modules/multer-conn')
+const { upload, allowImgExt } = require('../modules/multer-conn')
+const path = require('path')
+
+const { alert, filePath } = require('../modules/util')
+
 const pug = { title: '도서관리', file: 'book' }
 
 router.get(['/', '/list', '/list/:page'], async (req, res, next) => {
@@ -35,21 +39,23 @@ router.get('/create', (req, res, next) => {
 router.post('/save', upload.single('upfile'), joi('bookSave'), async (req, res, next) => {
 	try {
 		if(req.banExt) {
-
+			res.send(alert(req.banExt + '는 업로드가 허용되지 않습니다.'))
 		} else {
-
+			let { bookName, writer, content, sql='', values=[] ,connect=null } = req.body
+			sql = 'INSERT INTO books SET bookName=?, writer=?, content=?'
+			values = [bookName, writer, content]
+			connect = await pool.getConnection()
+			const [result] = await connect.query(sql, values)
+			connect.release()
+			if(req.file) {
+				sql = 'INSERT INTO files SET bookid=?, oriname=?, savename=?'
+				values = [result.insertId, req.file.originalname, req.file.filename]
+				connect = await pool.getConnection()
+				const [result2] = await connect.query(sql, values)
+				connect.release()
+			}
+			res.redirect('/book')
 		}
-		let { bookName, writer, content } = req.body
-		let sql = 'INSERT INTO books SET bookName=?, writer=?, content=?'
-		let values = [bookName, writer, content]
-		const connect = await pool.getConnection()
-		const [result] = await connect.query(sql, values)
-
-
-
-
-		connect.release()
-		res.redirect('/book')
 	} catch (err) {
 		next(err)
 	}
@@ -70,10 +76,20 @@ router.get('/remove/:id', async (req, res, next) => {
 router.get('/view/:id', async (req, res, next) => {
 	try {
 		let sql, connect
-		sql = 'SELECT * FROM books WHERE id='+req.params.id
+		sql = `
+			SELECT books.*, files.id AS fid, files.oriname, files.savename FROM books 
+			LEFT JOIN files ON books.id = files.bookid 
+			WHERE books.id=${req.params.id}`
 		connect = await pool.getConnection()
 		const [[rs]]  = await connect.query(sql)
+		connect.release()
 		rs.createdAt = moment(rs.createdAt).format('YYYY-MM-DD')
+		if(rs.savename) {
+			// 이미지라면
+			if(allowImgExt.includes(path.extname(rs.savename).substr(1).toLocaleLowerCase())) {
+				rs.src = filePath(rs.savename).refPath
+			}
+		}
 		res.render('book/view', {...pug, rs, page: req.query.page || 1})
 	} catch (err) {
 		next(err)
@@ -83,9 +99,13 @@ router.get('/view/:id', async (req, res, next) => {
 router.get('/chg/:id', async (req, res, next) => {
 	try {
 		let sql, connect
-		sql = 'SELECT * FROM books WHERE id='+req.params.id
+		sql = `
+			SELECT books.*, files.id AS fid, files.oriname, files.savename FROM books 
+			LEFT JOIN files ON books.id = files.bookid 
+			WHERE books.id=${req.params.id}`
 		connect = await pool.getConnection()
 		const [[rs]]  = await connect.query(sql)
+		connect.release()
 		res.render('book/update', {...pug, rs, page: req.query.page || 1})
 	} catch (err) {
 		next(err)
@@ -101,6 +121,19 @@ router.post('/update', joi('bookUpdate'), async (req, res, next) => {
 		let [rs] = await connect.query(sql, values)
 		connect.release()
 		res.redirect('/book/list/'+(page || 1))
+	} catch (err) {
+		next(err)
+	}
+})
+
+router.get('/download/:id', async (req, res, next) => {
+	try {
+		let sql, connect
+		sql = 'SELECT * FROM files WHERE id='+req.params.id
+		connect = await pool.getConnection()
+		const [[rs]] = await connect.query(sql)
+		connect.release()
+		res.download(filePath(rs.savename).realPath, rs.oriname) // savename, oriname
 	} catch (err) {
 		next(err)
 	}

@@ -18,4 +18,7 @@
 -- SELECT COUNT(*) FROM books;
 -- SELECT * FROM books WHERE id = 1;
 -- SELECT * FROM books WHERE bookName LIKE '%길동%';
-SELECT * FROM books WHERE bookName LIKE '%길동%' OR content LIKE '%나를%';
+-- SELECT * FROM books WHERE bookName LIKE '%길동%' OR content LIKE '%나를%';
+
+-- JOIN
+SELECT books.*, files.oriname, files.savename, files.id AS fid FROM books LEFT JOIN files ON books.id = files.bookid ORDER BY books.id DESC

@@ -31,7 +31,7 @@ router.get('/create', (req, res, next) => {
 	res.render('book/create', pug)
 })
 
-router.post('/save', joi('book'), async (req, res, next) => {
+router.post('/save', joi('bookSave'), async (req, res, next) => {
 	try {
 		let { bookName, writer, content } = req.body
 		let sql = 'INSERT INTO books SET bookName=?, writer=?, content=?'
@@ -51,7 +51,7 @@ router.get('/remove/:id', async (req, res, next) => {
 		const connect = await pool.getConnection()
 		const [ result ] = await connect.query(sql)
 		connect.release()
-		res.redirect('/book')
+		res.redirect('/book/list/'+(req.query.page || 1))
 	} catch (err) {
 		next(err)
 	}
@@ -65,6 +65,32 @@ router.get('/view/:id', async (req, res, next) => {
 		const [[rs]]  = await connect.query(sql)
 		rs.createdAt = moment(rs.createdAt).format('YYYY-MM-DD')
 		res.render('book/view', {...pug, rs, page: req.query.page || 1})
+	} catch (err) {
+		next(err)
+	}
+})
+
+router.get('/chg/:id', async (req, res, next) => {
+	try {
+		let sql, connect
+		sql = 'SELECT * FROM books WHERE id='+req.params.id
+		connect = await pool.getConnection()
+		const [[rs]]  = await connect.query(sql)
+		res.render('book/update', {...pug, rs, page: req.query.page || 1})
+	} catch (err) {
+		next(err)
+	}
+})
+
+router.post('/update', joi('bookUpdate'), async (req, res, next) => {
+	try {
+		let { bookName, writer='', content, id, page, sql=null, values=[], connect=null } = req.body
+		sql = 'UPDATE books SET bookName=?, writer=?, content=? WHERE id=?'
+		values=[bookName, writer, content, id]
+		connect = await pool.getConnection()
+		let [rs] = await connect.query(sql, values)
+		connect.release()
+		res.redirect('/book/list/'+(page || 1))
 	} catch (err) {
 		next(err)
 	}

@@ -18,10 +18,13 @@ app.use(express.json()) // post 방식으로 들어온 데이터를 req.body로 
 app.use(express.urlencoded({ extended: false }))
 
 // Router
-app.use('/', express.static(path.join(__dirname, './public')))
-
 const bookRouter = require('./routes/book-router')
+const multerRouter = require('./routes/multer-router')
+
+app.use('/', express.static(path.join(__dirname, './public')))
+app.use('/uploads', express.static(path.join(__dirname, './storages'))) // file 업로드
 app.use('/book', bookRouter)
+app.use('/multer', multerRouter)
 
 
 // Error

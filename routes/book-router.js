@@ -15,11 +15,13 @@ router.get(['/', '/list', '/list/:page'], async (req, res, next) => {
 	try {
 		let page, connect, sql, values;
 		page = req.params.page || 1
-		connect = await pool.getConnection()
 		sql = 'SELECT count(*) FROM books'
+		connect = await pool.getConnection()
 		const [[recordCount]] = await connect.query(sql)
+		connect.release()
 		const pageObj = pager(page, recordCount['count(*)'])
 		sql = 'SELECT * FROM books ORDER BY id DESC LIMIT ?, ?'
+		connect = await pool.getConnection()
 		const [ rs ] = await connect.query(sql, [pageObj.startRec, pageObj.listCnt])
 		connect.release()
 		const books = rs.map(v => {

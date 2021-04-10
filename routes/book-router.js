@@ -6,8 +6,8 @@ const router = express.Router()
 const { pool } = require('../modules/mysql-conn')
 const { upload, allowImgExt } = require('../modules/multer-conn')
 const path = require('path')
-
-const { alert, filePath } = require('../modules/util')
+const { alert, filePath, isImg } = require('../modules/util')
+const fs = require('fs-extra')
 
 const pug = { title: '도서관리', file: 'book' }
 
@@ -65,9 +65,21 @@ router.post('/save', upload.single('upfile'), joi('bookSave'), async (req, res, 
 
 router.get('/remove/:id', async (req, res, next) => {
 	try {
-		let sql = 'DELETE FROM books WHERE id='+req.params.id
-		const connect = await pool.getConnection()
-		const [ result ] = await connect.query(sql)
+		let sql, connect
+		sql = 'SELECT * FROM files WHERE bookid='+req.params.id
+		connect = await pool.getConnection()
+		let [rs] = await connect.query(sql)
+		connect.release()
+		if(rs[0]) {
+			await fs.remove(filePath(rs[0].savename).realPath)
+			sql = 'DELETE FROM files WHERE bookid=' + req.params.id
+			connect = await pool.getConnection()
+			await connect.query(sql)
+			connect.release()
+		}
+		sql = 'DELETE FROM books WHERE id='+req.params.id
+		connect = await pool.getConnection()
+		await connect.query(sql)
 		connect.release()
 		res.redirect('/book/list/'+(req.query.page || 1))
 	} catch (err) {
@@ -86,11 +98,9 @@ router.get('/view/:id', async (req, res, next) => {
 		const [[rs]]  = await connect.query(sql)
 		connect.release()
 		rs.createdAt = moment(rs.createdAt).format('YYYY-MM-DD')
-		if(rs.savename) {
+		if(rs.savename && isImg(rs.savename)) {
 			// 이미지라면
-			if(allowImgExt.includes(path.extname(rs.savename).substr(1).toLocaleLowerCase())) {
 				rs.src = filePath(rs.savename).refPath
-			}
 		}
 		res.render('book/view', {...pug, rs, page: req.query.page || 1})
 	} catch (err) {
@@ -108,21 +118,44 @@ router.get('/chg/:id', async (req, res, next) => {
 		connect = await pool.getConnection()
 		const [[rs]]  = await connect.query(sql)
 		connect.release()
+		if(rs.savename && isImg(rs.savename)) {
+			// 이미지라면
+				rs.src = filePath(rs.savename).refPath
+		}
 		res.render('book/update', {...pug, rs, page: req.query.page || 1})
 	} catch (err) {
 		next(err)
 	}
 })
 
-router.post('/update', joi('bookUpdate'), async (req, res, next) => {
+router.post('/update', upload.single('upfile'), joi('bookUpdate'), async (req, res, next) => {
 	try {
-		let { bookName, writer='', content, id, page, sql=null, values=[], connect=null } = req.body
-		sql = 'UPDATE books SET bookName=?, writer=?, content=? WHERE id=?'
-		values=[bookName, writer, content, id]
-		connect = await pool.getConnection()
-		let [rs] = await connect.query(sql, values)
-		connect.release()
-		res.redirect('/book/list/'+(page || 1))
+		if(req.banExt) {
+			res.send(alert(req.banExt + '는 업로드가 허용되지 않습니다.'))
+		} else {
+			let { bookName, writer='', content, id, page, sql=null, values=[], connect=null } = req.body
+			sql = 'UPDATE books SET bookName=?, writer=?, content=? WHERE id=?'
+			values=[bookName, writer, content, id]
+			connect = await pool.getConnection()
+			let [rs] = await connect.query(sql, values)
+			connect.release()
+			if(req.file) {
+				sql = 'SELECT * FROM files WHERE bookid='+id
+				connect = await pool.getConnection()
+				let [rs2] = await connect.query(sql)
+				if(rs2[0]) {
+					await fs.remove(filePath(rs2[0].savename).realPath)
+					sql = 'UPDATE files SET savename=?, oriname=? WHERE bookid=?'
+				} else {
+					sql = 'INSERT INTO files SET savename=?, oriname=?, bookid=?'
+				}
+				values = [req.file.filename, req.file.originalname, id]
+					connect = await pool.getConnection()
+					await connect.query(sql, values)
+					connect.release()
+			}
+			res.redirect('/book/list/'+(page || 1))
+		}
 	} catch (err) {
 		next(err)
 	}
@@ -136,6 +169,28 @@ router.get('/download/:id', async (req, res, next) => {
 		const [[rs]] = await connect.query(sql)
 		connect.release()
 		res.download(filePath(rs.savename).realPath, rs.oriname) // savename, oriname
+	} catch (err) {
+		next(err)
+	}
+})
+
+router.get('/api/file-remove/:id', async (req, res, next) => {
+	try {
+		let sql, connect
+		sql = 'SELECT * FROM files WHERE bookid=' + req.params.id
+		connect = await pool.getConnection()
+		let [rs] = await connect.query(sql)
+		connect.release()
+		if(rs[0]) {
+			await fs.remove(filePath(rs[0].savename).realPath)
+			sql = 'DELETE FROM files WHERE bookid=' + req.params.id
+			connect = await pool.getConnection()
+			await connect.query(sql)
+			connect.release()
+			res.json({ code: 200 })
+		} else {
+			res.json({ code: 404, error: '파일이 존재하지 않습니다.'})
+		}
 	} catch (err) {
 		next(err)
 	}

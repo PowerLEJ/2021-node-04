@@ -4,6 +4,8 @@ const app = express()
 const path = require('path')
 const createError = require('http-errors')
 const logger = require('./middlewares/logger-mw')
+const session = require('./middlewares/session-mw')
+const local = require('./middlewares/local-mw')
 
 // Init
 app.listen(process.env.PORT, () => { 
@@ -18,6 +20,8 @@ app.locals.TITLE = '도서관리시스템'
 app.use(logger('common')) // tiny, combined, common
 app.use(express.json()) // post 방식으로 들어온 데이터를 req.body로 접근할 수 있다
 app.use(express.urlencoded({ extended: false }))
+app.use(session()) // session
+app.use(local())
 
 // Router
 const bookRouter = require('./routes/book-router')

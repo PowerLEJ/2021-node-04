@@ -21,4 +21,4 @@
 -- SELECT * FROM books WHERE bookName LIKE '%길동%' OR content LIKE '%나를%';
 
 -- JOIN
-SELECT books.*, files.id AS fid, files.oriname, files.savename FROM books LEFT JOIN files ON books.id = files.bookid ORDER BY books.id DESC
+-- SELECT books.*, files.id AS fid, files.oriname, files.savename FROM books LEFT JOIN files ON books.id = files.bookid ORDER BY books.id DESC

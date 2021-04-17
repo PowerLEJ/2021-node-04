@@ -19,7 +19,10 @@ block content
 					td= book.writer 
 					td= book.createdAt 
 					td
-						a(href=`/book/chg/${book.id}?page=${pager.page}`) 수정
-						a(href=`javascript: delBook(${book.id}, ${pager.page});`) 삭제
+						if user && book.uid == user.id
+							a(href=`/book/chg/${book.id}?page=${pager.page}`) 수정
+							a(href=`javascript: delBook(${book.id}, ${pager.page});`) 삭제
+						else
+							span &nbsp
 
 	include ../inc/pager

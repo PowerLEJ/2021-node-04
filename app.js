@@ -33,7 +33,6 @@ app.use(local())
 
 
 
-
 /************* Router ***************/
 const bookRouter = require('./routes/book-router')
 const authRouter = require('./routes/auth-router')

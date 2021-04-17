@@ -7,15 +7,16 @@ const joi = require('../middlewares/joi-mw')
 const passport = require('passport')
 const { alert } = require('../modules/util')
 const { pool } = require('../modules/mysql-conn')
+const { isUser, isGuest } = require('../middlewares/auth-mw')
 
 const pug = { file: 'auth' }
 
-router.get('/join', (req, res, next) => {
+router.get('/join',isGuest, (req, res, next) => {
 	pug.title = '회원가입'
 	res.render('auth/join', pug)
 })
 
-router.post('/save', async (req, res, next) => {
+router.post('/save',isGuest, async (req, res, next) => {
 	try {
 		let { userid, userpw, userpwReview, email } = req.body
 		let sql, connect, values
@@ -44,12 +45,12 @@ router.post('/save', async (req, res, next) => {
 	}
 })
 
-router.get('/login', (req, res, next) => {
+router.get('/login',isGuest, (req, res, next) => {
 	pug.title = '회원 로그인'
 	res.render('auth/login', pug)
 })
 
-router.post('/logon',  async (req, res, next) => {
+router.post('/logon',isGuest,  async (req, res, next) => {
 	const done = (err, user, msg) => {
 		if(err) return next(err)
 		if(!user) return res.send(alert(msg, '/'))
@@ -65,14 +66,14 @@ router.post('/logon',  async (req, res, next) => {
 	passport.authenticate('local', done)(req, res, next)
 })
 
-router.get('/logout', (req, res, next) => {
+router.get('/logout',isUser, (req, res, next) => {
 	req.logout()
 	req.session.destroy()
 	req.app.locals.user = null
 	res.send(alert('로그아웃 되었습니다.', '/'))
 })
 
-router.get('/api/valid-userid', async (req, res, next) => {
+router.get('/api/valid-userid',isGuest, async (req, res, next) => {
 	try {
 		let sql, values, connect
 		sql = 'SELECT userid FROM users WHERE userid=?'

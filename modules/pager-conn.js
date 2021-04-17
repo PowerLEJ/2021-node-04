@@ -1,5 +1,5 @@
 // LIMIT startRec, listCnt
-// obj = {listCnt: 5, pagerCnt: 3}
+// obj = { listCnt: 5, pageCnt: 3 }
 const pager = (page, totalRec, obj={}) => {
 	page = Number(page)
 	totalRec = Number(totalRec)

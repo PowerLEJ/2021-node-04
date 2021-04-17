@@ -1,10 +1,10 @@
 extends ../layout/default
-block content
+block content 
 	form(action="/book/save", method="post" enctype="multipart/form-data")
 		table.table.create-tb 
 			tbody 
 				include ../inc/inputForm
-				tr 
+				tr
 					td 첨부파일
 					td 
 						input.form-control-file(type="file" name="upfile" placeholder="첨부파일")

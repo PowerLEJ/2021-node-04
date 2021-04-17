@@ -1,6 +1,6 @@
 extends ../layout/default
-block content 
-	table.table.table-hover.text-center
+block content
+	table.table.table-hover.text-center 
 		thead 
 			tr 
 				th 번호
@@ -10,16 +10,15 @@ block content
 				th 발행일
 				th 관리
 		tbody 
-			each book in books 
+			each book in books
 				tr 
-					td= book.id 
+					td= book.id
 					td(style="text-align: left")
-						a(href=`/book/view/${book.id}?page=${pager.page}`)= book.bookName 
-					td(style="text-align: left")= book.content 
-					td= book.writer 
-					td= book.createdAt 
+						a(href=`/book/view/${book.id}?page=${pager.page}`)= book.bookName
+					td(style="text-align: left")= book.content
+					td= book.writer
+					td= book.createdAt
 					td
-						a(href=`/book/chg/${book.id}?page=${pager.page}`) 수정
-						a(href=`javascript: delBook(${book.id}, ${pager.page});`) 삭제
-
+						a(href=`/book/chg/${book.id}`) 수정
+						a(href=`javascript: delBook(${book.id});`) 삭제
 	include ../inc/pager

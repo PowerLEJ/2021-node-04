@@ -4,6 +4,7 @@ const moment = require('moment')
 const bcrypt = require('bcrypt')
 const path = require('path')
 const joi = require('../middlewares/joi-mw')
+const passport = require('passport')
 const { alert } = require('../modules/util')
 const { pool } = require('../modules/mysql-conn')
 
@@ -21,10 +22,10 @@ router.post('/save', async (req, res, next) => {
 		sql = 'SELECT userid FROM users WHERE userid=?'
 		values = [userid]
 		connect = await pool.getConnection()
-		const [rs] = await connect.query(sql, values)
+		const rs = await connect.query(sql, values)
 		connect.release()
 		if(userpw === userpwReview && userid && email) {
-			if(rs[0]) res.send(alert('아이디를 사용할 수 없습니다.'))
+			if(rs[0][0]) res.send(alert('아이디를 사용할 수 없습니다.'))
 			else {
 				sql = 'INSERT INTO users SET userid=?, userpw=?, email=?'
 				userpw = await bcrypt.hash(userpw, Number(process.env.BCRYPT_ROUND))
@@ -48,16 +49,27 @@ router.get('/login', (req, res, next) => {
 	res.render('auth/login', pug)
 })
 
-router.post('/logon', async (req, res, next) => {
-	try {
-		// let sql, connect, values
-		// sql = ''
-		// connect = await pool.getConnection()
-		// const [rs] = await connect.query(sql, values)
-		// connect.release()
-	} catch (err) {
-		next(err)
+router.post('/logon',  async (req, res, next) => {
+	const done = (err, user, msg) => {
+		if(err) return next(err)
+		if(!user) return res.send(alert(msg, '/'))
+		else {
+			req.login(user, (err) => {
+				if(err) return next(err)
+				else {
+					return res.send(alert('로그인 되었습니다.', '/'))
+				}
+			})
+		}
 	}
+	passport.authenticate('local', done)(req, res, next)
+})
+
+router.get('/logout', (req, res, next) => {
+	req.logout()
+	req.session.destroy()
+	req.app.locals.user = null
+	res.send(alert('로그아웃 되었습니다.', '/'))
 })
 
 router.get('/api/valid-userid', async (req, res, next) => {
